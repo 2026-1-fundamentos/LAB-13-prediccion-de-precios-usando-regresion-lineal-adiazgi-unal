@@ -61,3 +61,202 @@
 # {'type': 'metrics', 'dataset': 'train', 'r2': 0.8, 'mse': 0.7, 'mad': 0.9}
 # {'type': 'metrics', 'dataset': 'test', 'r2': 0.7, 'mse': 0.6, 'mad': 0.8}
 #
+import os
+import gzip
+import json
+import pickle
+import sys
+
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.feature_selection import SelectKBest, f_regression
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import (
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score,
+)
+from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
+
+def pregunta_01():
+
+    # Obtener la ruta absoluta del directorio actual
+    current_dir = os.getcwd()
+    print(f"Directorio actual: {current_dir}")
+    
+    # Crear carpetas con rutas absolutas
+    models_dir = os.path.join(current_dir, "files", "models")
+    output_dir = os.path.join(current_dir, "files", "output")
+    
+    os.makedirs(models_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    print(f"Carpeta models creada en: {models_dir}")
+    print(f"Carpeta output creada en: {output_dir}")
+
+    #
+    # Carga de datos
+    #
+    train_path = os.path.join(current_dir, "files", "input", "train_data.csv.zip")
+    test_path = os.path.join(current_dir, "files", "input", "test_data.csv.zip")
+    
+    print(f"Buscando train en: {train_path}")
+    print(f"Buscando test en: {test_path}")
+    
+    train = pd.read_csv(train_path)
+    test = pd.read_csv(test_path)
+
+    print("Columnas en train:", train.columns.tolist())
+
+    #
+    # Preprocesamiento
+    #
+    for df in [train, test]:
+        df["Age"] = 2021 - df["Year"]
+        df.drop(columns=["Year", "Car_Name"], inplace=True)
+
+    #
+    # Variable objetivo: Selling_Price
+    #
+    y_train = train["Selling_Price"]
+    x_train = train.drop(columns=["Selling_Price"])
+
+    y_test = test["Selling_Price"]
+    x_test = test.drop(columns=["Selling_Price"])
+
+    print("Columnas en x_train:", x_train.columns.tolist())
+
+    #
+    # Variables categóricas y numéricas
+    #
+    cat_cols = x_train.select_dtypes(include=["object"]).columns.tolist()
+    num_cols = x_train.select_dtypes(exclude=["object"]).columns.tolist()
+
+    print("Columnas categóricas:", cat_cols)
+    print("Columnas numéricas:", num_cols)
+
+    #
+    # Preprocesador
+    #
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols),
+            ("num", MinMaxScaler(), num_cols),
+        ]
+    )
+
+    #
+    # Pipeline
+    #
+    pipeline = Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            ("selectkbest", SelectKBest(score_func=f_regression)),
+            ("regressor", LinearRegression()),
+        ]
+    )
+
+    #
+    # Optimización
+    #
+    param_grid = {"selectkbest__k": list(range(1, 12))}
+
+    model = GridSearchCV(
+        estimator=pipeline,
+        param_grid=param_grid,
+        cv=10,
+        scoring="neg_mean_absolute_error",
+        n_jobs=1,
+    )
+
+    print("Entrenando modelo...")
+    model.fit(x_train, y_train)
+    print("Modelo entrenado!")
+    print("Mejores parámetros:", model.best_params_)
+    print("Mejor puntaje:", model.best_score_)
+
+    #
+    # Guardar modelo (con ruta absoluta)
+    #
+    model_path = os.path.join(models_dir, "model.pkl.gz")
+    print(f"Guardando modelo en: {model_path}")
+    
+    try:
+        with gzip.open(model_path, "wb") as file:
+            pickle.dump(model, file)
+        print(f"✅ Modelo guardado exitosamente en {model_path}")
+    except Exception as e:
+        print(f"❌ Error guardando el modelo: {e}")
+        raise
+
+    #
+    # Predicciones
+    #
+    print("Haciendo predicciones...")
+    y_train_pred = model.predict(x_train)
+    y_test_pred = model.predict(x_test)
+
+    #
+    # Métricas
+    #
+    metrics = [
+        {
+            "type": "metrics",
+            "dataset": "train",
+            "r2": float(r2_score(y_train, y_train_pred)),
+            "mse": float(mean_squared_error(y_train, y_train_pred)),
+            "mad": float(mean_absolute_error(y_train, y_train_pred)),
+        },
+        {
+            "type": "metrics",
+            "dataset": "test",
+            "r2": float(r2_score(y_test, y_test_pred)),
+            "mse": float(mean_squared_error(y_test, y_test_pred)),
+            "mad": float(mean_absolute_error(y_test, y_test_pred)),
+        },
+    ]
+
+    #
+    # Guardar métricas
+    #
+    metrics_path = os.path.join(output_dir, "metrics.json")
+    print(f"Guardando métricas en: {metrics_path}")
+    
+    try:
+        with open(metrics_path, "w", encoding="utf-8") as file:
+            for metric in metrics:
+                file.write(json.dumps(metric) + "\n")
+        print(f"✅ Métricas guardadas exitosamente en {metrics_path}")
+        
+        # Verificar que el archivo se creó
+        if os.path.exists(metrics_path):
+            print(f"✅ Archivo metrics.json creado (tamaño: {os.path.getsize(metrics_path)} bytes)")
+        else:
+            print("❌ El archivo metrics.json NO se creó")
+            
+    except Exception as e:
+        print(f"❌ Error guardando métricas: {e}")
+        raise
+
+    # Verificar que todos los archivos se crearon
+    print("\n=== VERIFICACIÓN FINAL ===")
+    print(f"¿Existe model.pkl.gz? {os.path.exists(model_path)}")
+    print(f"¿Existe metrics.json? {os.path.exists(metrics_path)}")
+    
+    # Listar contenido de las carpetas
+    print(f"\nContenido de {models_dir}:")
+    for file in os.listdir(models_dir):
+        print(f"  - {file}")
+    
+    print(f"\nContenido de {output_dir}:")
+    for file in os.listdir(output_dir):
+        print(f"  - {file}")
+
+    return model
+
+if __name__ == "__main__":
+    pregunta_01()
+

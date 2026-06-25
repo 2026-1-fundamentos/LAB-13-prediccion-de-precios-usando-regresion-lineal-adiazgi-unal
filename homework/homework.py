@@ -87,37 +87,30 @@ def pregunta_01():
     os.makedirs("files/models", exist_ok=True)
     os.makedirs("files/output", exist_ok=True)
 
-    #
-    # Carga de datos
-    #
     train = pd.read_csv("files/input/train_data.csv.zip")
     test = pd.read_csv("files/input/test_data.csv.zip")
 
     #
-    # Preprocesamiento mínimo
+    # Preprocesamiento: crear Age, eliminar Year y Car_Name.
+    # Present_Price es el target; Selling_Price se conserva como predictora.
     #
     for df in [train, test]:
         df["Age"] = 2021 - df["Year"]
         df.drop(columns=["Year", "Car_Name"], inplace=True)
 
-    #
-    # Variable objetivo: Selling_Price (sin log)
-    #
-    y_train = train["Selling_Price"]
-    x_train = train.drop(columns=["Selling_Price"])
+    y_train = train["Present_Price"]
+    x_train = train.drop(columns=["Present_Price"])
 
-    y_test = test["Selling_Price"]
-    x_test = test.drop(columns=["Selling_Price"])
+    y_test = test["Present_Price"]
+    x_test = test.drop(columns=["Present_Price"])
 
     #
-    # Variables categóricas y numéricas
+    # Owner se trata como categórica (pocos valores discretos, sin
+    # relación lineal natural con el precio), no como numérica continua.
     #
-    cat_cols = x_train.select_dtypes(include=["object"]).columns.tolist()
-    num_cols = x_train.select_dtypes(exclude=["object"]).columns.tolist()
+    cat_cols = ["Fuel_Type", "Selling_type", "Transmission", "Owner"]
+    num_cols = ["Selling_Price", "Driven_kms", "Age"]
 
-    #
-    # Preprocesador
-    #
     preprocessor = ColumnTransformer(
         transformers=[
             ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols),
@@ -125,9 +118,6 @@ def pregunta_01():
         ]
     )
 
-    #
-    # Pipeline con LinearRegression
-    #
     pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
@@ -136,10 +126,7 @@ def pregunta_01():
         ]
     )
 
-    #
-    # GridSearch solo para k
-    #
-    param_grid = {"selectkbest__k": list(range(1, 12))}
+    param_grid = {"selectkbest__k": list(range(1, 13))}
 
     model = GridSearchCV(
         estimator=pipeline,
@@ -151,24 +138,12 @@ def pregunta_01():
 
     model.fit(x_train, y_train)
 
-    print(f"Mejores parámetros: {model.best_params_}")
-    print(f"Mejor score (MAE negativo): {model.best_score_}")
-
-    #
-    # Guardar modelo
-    #
     with gzip.open("files/models/model.pkl.gz", "wb") as file:
         pickle.dump(model, file)
 
-    #
-    # Predicciones
-    #
     y_train_pred = model.predict(x_train)
     y_test_pred = model.predict(x_test)
 
-    #
-    # Métricas
-    #
     metrics = [
         {
             "type": "metrics",
@@ -186,12 +161,6 @@ def pregunta_01():
         },
     ]
 
-    print(f"R² en entrenamiento: {metrics[0]['r2']}")
-    print(f"R² en prueba: {metrics[1]['r2']}")
-
-    #
-    # Guardar métricas
-    #
     with open("files/output/metrics.json", "w", encoding="utf-8") as file:
         for metric in metrics:
             file.write(json.dumps(metric) + "\n")
@@ -199,5 +168,3 @@ def pregunta_01():
 
 if __name__ == "__main__":
     pregunta_01()
-
-    

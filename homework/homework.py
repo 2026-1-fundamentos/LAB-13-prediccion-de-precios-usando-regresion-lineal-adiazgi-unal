@@ -62,20 +62,10 @@
 # {'type': 'metrics', 'dataset': 'train', 'r2': 0.8, 'mse': 0.7, 'mad': 0.9}
 # {'type': 'metrics', 'dataset': 'test', 'r2': 0.7, 'mse': 0.6, 'mad': 0.8}
 #
-<<<<<<< HEAD
 import os
 import gzip
 import json
 import pickle
-import sys
-=======
-
-
-
-import gzip
-import json
-import pickle
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
 import pandas as pd
 
@@ -91,208 +81,88 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 
-<<<<<<< HEAD
-def pregunta_01():
-
-    # Obtener la ruta absoluta del directorio actual
-    current_dir = os.getcwd()
-    print(f"Directorio actual: {current_dir}")
-    
-    # Crear carpetas con rutas absolutas
-    models_dir = os.path.join(current_dir, "files", "models")
-    output_dir = os.path.join(current_dir, "files", "output")
-    
-    os.makedirs(models_dir, exist_ok=True)
-    os.makedirs(output_dir, exist_ok=True)
-    
-    print(f"Carpeta models creada en: {models_dir}")
-    print(f"Carpeta output creada en: {output_dir}")
-=======
 
 def pregunta_01():
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
+
+    os.makedirs("files/models", exist_ok=True)
+    os.makedirs("files/output", exist_ok=True)
 
     #
     # Carga de datos
     #
-<<<<<<< HEAD
-    train_path = os.path.join(current_dir, "files", "input", "train_data.csv.zip")
-    test_path = os.path.join(current_dir, "files", "input", "test_data.csv.zip")
-    
-    print(f"Buscando train en: {train_path}")
-    print(f"Buscando test en: {test_path}")
-    
-    train = pd.read_csv(train_path)
-    test = pd.read_csv(test_path)
-
-    print("Columnas en train:", train.columns.tolist())
-=======
-    train = pd.read_csv("files/input/train_data.csv")
-    test = pd.read_csv("files/input/test_data.csv")
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
+    train = pd.read_csv("files/input/train_data.csv.zip")
+    test = pd.read_csv("files/input/test_data.csv.zip")
 
     #
-    # Preprocesamiento
+    # Preprocesamiento mínimo
     #
     for df in [train, test]:
         df["Age"] = 2021 - df["Year"]
-<<<<<<< HEAD
         df.drop(columns=["Year", "Car_Name"], inplace=True)
 
     #
-    # Variable objetivo: Selling_Price
+    # Variable objetivo: Selling_Price (sin log)
     #
     y_train = train["Selling_Price"]
     x_train = train.drop(columns=["Selling_Price"])
 
     y_test = test["Selling_Price"]
     x_test = test.drop(columns=["Selling_Price"])
-
-    print("Columnas en x_train:", x_train.columns.tolist())
-=======
-        df.drop(
-            columns=["Year", "Car_Name"],
-            inplace=True,
-        )
-
-    #
-    # División en X e y
-    #
-    x_train = train.drop(columns=["Selling_Price"])
-    y_train = train["Selling_Price"]
-
-    x_test = test.drop(columns=["Selling_Price"])
-    y_test = test["Selling_Price"]
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
     #
     # Variables categóricas y numéricas
     #
-<<<<<<< HEAD
     cat_cols = x_train.select_dtypes(include=["object"]).columns.tolist()
     num_cols = x_train.select_dtypes(exclude=["object"]).columns.tolist()
-
-    print("Columnas categóricas:", cat_cols)
-    print("Columnas numéricas:", num_cols)
-=======
-    cat_cols = x_train.select_dtypes(
-        include=["object"]
-    ).columns.tolist()
-
-    num_cols = x_train.select_dtypes(
-        exclude=["object"]
-    ).columns.tolist()
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
     #
     # Preprocesador
     #
     preprocessor = ColumnTransformer(
         transformers=[
-<<<<<<< HEAD
             ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols),
             ("num", MinMaxScaler(), num_cols),
-=======
-            (
-                "cat",
-                OneHotEncoder(handle_unknown="ignore"),
-                cat_cols,
-            ),
-            (
-                "num",
-                MinMaxScaler(),
-                num_cols,
-            ),
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
         ]
     )
 
     #
-    # Pipeline
+    # Pipeline con LinearRegression
     #
     pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-<<<<<<< HEAD
             ("selectkbest", SelectKBest(score_func=f_regression)),
             ("regressor", LinearRegression()),
-=======
-            (
-                "selectkbest",
-                SelectKBest(score_func=f_regression),
-            ),
-            (
-                "regressor",
-                LinearRegression(),
-            ),
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
         ]
     )
 
     #
-<<<<<<< HEAD
-    # Optimización
+    # GridSearch solo para k
     #
     param_grid = {"selectkbest__k": list(range(1, 12))}
-=======
-    # Búsqueda de hiperparámetros
-    #
-    param_grid = {
-        "selectkbest__k": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    }
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
     model = GridSearchCV(
         estimator=pipeline,
         param_grid=param_grid,
         cv=10,
         scoring="neg_mean_absolute_error",
-<<<<<<< HEAD
         n_jobs=1,
     )
 
-    print("Entrenando modelo...")
     model.fit(x_train, y_train)
-    print("Modelo entrenado!")
-    print("Mejores parámetros:", model.best_params_)
-    print("Mejor puntaje:", model.best_score_)
 
-    #
-    # Guardar modelo (con ruta absoluta)
-    #
-    model_path = os.path.join(models_dir, "model.pkl.gz")
-    print(f"Guardando modelo en: {model_path}")
-    
-    try:
-        with gzip.open(model_path, "wb") as file:
-            pickle.dump(model, file)
-        print(f"✅ Modelo guardado exitosamente en {model_path}")
-    except Exception as e:
-        print(f"❌ Error guardando el modelo: {e}")
-        raise
-=======
-        n_jobs=-1,
-    )
-
-    model.fit(x_train, y_train)
+    print(f"Mejores parámetros: {model.best_params_}")
+    print(f"Mejor score (MAE negativo): {model.best_score_}")
 
     #
     # Guardar modelo
     #
-    with gzip.open(
-        "files/models/model.pkl.gz",
-        "wb",
-    ) as file:
+    with gzip.open("files/models/model.pkl.gz", "wb") as file:
         pickle.dump(model, file)
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
     #
     # Predicciones
     #
-<<<<<<< HEAD
-    print("Haciendo predicciones...")
-=======
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
     y_train_pred = model.predict(x_train)
     y_test_pred = model.predict(x_test)
 
@@ -316,57 +186,18 @@ def pregunta_01():
         },
     ]
 
+    print(f"R² en entrenamiento: {metrics[0]['r2']}")
+    print(f"R² en prueba: {metrics[1]['r2']}")
+
     #
     # Guardar métricas
     #
-<<<<<<< HEAD
-    metrics_path = os.path.join(output_dir, "metrics.json")
-    print(f"Guardando métricas en: {metrics_path}")
-    
-    try:
-        with open(metrics_path, "w", encoding="utf-8") as file:
-            for metric in metrics:
-                file.write(json.dumps(metric) + "\n")
-        print(f"✅ Métricas guardadas exitosamente en {metrics_path}")
-        
-        # Verificar que el archivo se creó
-        if os.path.exists(metrics_path):
-            print(f"✅ Archivo metrics.json creado (tamaño: {os.path.getsize(metrics_path)} bytes)")
-        else:
-            print("❌ El archivo metrics.json NO se creó")
-            
-    except Exception as e:
-        print(f"❌ Error guardando métricas: {e}")
-        raise
+    with open("files/output/metrics.json", "w", encoding="utf-8") as file:
+        for metric in metrics:
+            file.write(json.dumps(metric) + "\n")
 
-    # Verificar que todos los archivos se crearon
-    print("\n=== VERIFICACIÓN FINAL ===")
-    print(f"¿Existe model.pkl.gz? {os.path.exists(model_path)}")
-    print(f"¿Existe metrics.json? {os.path.exists(metrics_path)}")
-    
-    # Listar contenido de las carpetas
-    print(f"\nContenido de {models_dir}:")
-    for file in os.listdir(models_dir):
-        print(f"  - {file}")
-    
-    print(f"\nContenido de {output_dir}:")
-    for file in os.listdir(output_dir):
-        print(f"  - {file}")
-
-    return model
 
 if __name__ == "__main__":
     pregunta_01()
 
-=======
-    with open(
-        "files/output/metrics.json",
-        "w",
-    ) as file:
-        for metric in metrics:
-            file.write(json.dumps(metric) + "\n")
-
-   if __name__ == "__main__":
-    pregunta_01()
-       
->>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
+    

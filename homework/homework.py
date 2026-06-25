@@ -55,9 +55,166 @@
 # Calcule las metricas r2, error cuadratico medio, y error absoluto medio
 # para los conjuntos de entrenamiento y prueba. Guardelas en el archivo
 # files/output/metrics.json. Cada fila del archivo es un diccionario con
+
 # las metricas de un modelo. Este diccionario tiene un campo para indicar
 # si es el conjunto de entrenamiento o prueba. Por ejemplo:
 #
 # {'type': 'metrics', 'dataset': 'train', 'r2': 0.8, 'mse': 0.7, 'mad': 0.9}
 # {'type': 'metrics', 'dataset': 'test', 'r2': 0.7, 'mse': 0.6, 'mad': 0.8}
 #
+
+
+
+import gzip
+import json
+import pickle
+
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.feature_selection import SelectKBest, f_regression
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import (
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score,
+)
+from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
+
+
+def pregunta_01():
+
+    #
+    # Carga de datos
+    #
+    train = pd.read_csv("files/input/train_data.csv")
+    test = pd.read_csv("files/input/test_data.csv")
+
+    #
+    # Preprocesamiento
+    #
+    for df in [train, test]:
+        df["Age"] = 2021 - df["Year"]
+        df.drop(
+            columns=["Year", "Car_Name"],
+            inplace=True,
+        )
+
+    #
+    # División en X e y
+    #
+    x_train = train.drop(columns=["Selling_Price"])
+    y_train = train["Selling_Price"]
+
+    x_test = test.drop(columns=["Selling_Price"])
+    y_test = test["Selling_Price"]
+
+    #
+    # Variables categóricas y numéricas
+    #
+    cat_cols = x_train.select_dtypes(
+        include=["object"]
+    ).columns.tolist()
+
+    num_cols = x_train.select_dtypes(
+        exclude=["object"]
+    ).columns.tolist()
+
+    #
+    # Preprocesador
+    #
+    preprocessor = ColumnTransformer(
+        transformers=[
+            (
+                "cat",
+                OneHotEncoder(handle_unknown="ignore"),
+                cat_cols,
+            ),
+            (
+                "num",
+                MinMaxScaler(),
+                num_cols,
+            ),
+        ]
+    )
+
+    #
+    # Pipeline
+    #
+    pipeline = Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            (
+                "selectkbest",
+                SelectKBest(score_func=f_regression),
+            ),
+            (
+                "regressor",
+                LinearRegression(),
+            ),
+        ]
+    )
+
+    #
+    # Búsqueda de hiperparámetros
+    #
+    param_grid = {
+        "selectkbest__k": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    }
+
+    model = GridSearchCV(
+        estimator=pipeline,
+        param_grid=param_grid,
+        cv=10,
+        scoring="neg_mean_absolute_error",
+        n_jobs=-1,
+    )
+
+    model.fit(x_train, y_train)
+
+    #
+    # Guardar modelo
+    #
+    with gzip.open(
+        "files/models/model.pkl.gz",
+        "wb",
+    ) as file:
+        pickle.dump(model, file)
+
+    #
+    # Predicciones
+    #
+    y_train_pred = model.predict(x_train)
+    y_test_pred = model.predict(x_test)
+
+    #
+    # Métricas
+    #
+    metrics = [
+        {
+            "type": "metrics",
+            "dataset": "train",
+            "r2": float(r2_score(y_train, y_train_pred)),
+            "mse": float(mean_squared_error(y_train, y_train_pred)),
+            "mad": float(mean_absolute_error(y_train, y_train_pred)),
+        },
+        {
+            "type": "metrics",
+            "dataset": "test",
+            "r2": float(r2_score(y_test, y_test_pred)),
+            "mse": float(mean_squared_error(y_test, y_test_pred)),
+            "mad": float(mean_absolute_error(y_test, y_test_pred)),
+        },
+    ]
+
+    #
+    # Guardar métricas
+    #
+    with open(
+        "files/output/metrics.json",
+        "w",
+    ) as file:
+        for metric in metrics:
+            file.write(json.dumps(metric) + "\n")

@@ -55,17 +55,27 @@
 # Calcule las metricas r2, error cuadratico medio, y error absoluto medio
 # para los conjuntos de entrenamiento y prueba. Guardelas en el archivo
 # files/output/metrics.json. Cada fila del archivo es un diccionario con
+
 # las metricas de un modelo. Este diccionario tiene un campo para indicar
 # si es el conjunto de entrenamiento o prueba. Por ejemplo:
 #
 # {'type': 'metrics', 'dataset': 'train', 'r2': 0.8, 'mse': 0.7, 'mad': 0.9}
 # {'type': 'metrics', 'dataset': 'test', 'r2': 0.7, 'mse': 0.6, 'mad': 0.8}
 #
+<<<<<<< HEAD
 import os
 import gzip
 import json
 import pickle
 import sys
+=======
+
+
+
+import gzip
+import json
+import pickle
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
 import pandas as pd
 
@@ -81,6 +91,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 
+<<<<<<< HEAD
 def pregunta_01():
 
     # Obtener la ruta absoluta del directorio actual
@@ -96,10 +107,15 @@ def pregunta_01():
     
     print(f"Carpeta models creada en: {models_dir}")
     print(f"Carpeta output creada en: {output_dir}")
+=======
+
+def pregunta_01():
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
     #
     # Carga de datos
     #
+<<<<<<< HEAD
     train_path = os.path.join(current_dir, "files", "input", "train_data.csv.zip")
     test_path = os.path.join(current_dir, "files", "input", "test_data.csv.zip")
     
@@ -110,12 +126,17 @@ def pregunta_01():
     test = pd.read_csv(test_path)
 
     print("Columnas en train:", train.columns.tolist())
+=======
+    train = pd.read_csv("files/input/train_data.csv")
+    test = pd.read_csv("files/input/test_data.csv")
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
     #
     # Preprocesamiento
     #
     for df in [train, test]:
         df["Age"] = 2021 - df["Year"]
+<<<<<<< HEAD
         df.drop(columns=["Year", "Car_Name"], inplace=True)
 
     #
@@ -128,23 +149,61 @@ def pregunta_01():
     x_test = test.drop(columns=["Selling_Price"])
 
     print("Columnas en x_train:", x_train.columns.tolist())
+=======
+        df.drop(
+            columns=["Year", "Car_Name"],
+            inplace=True,
+        )
+
+    #
+    # División en X e y
+    #
+    x_train = train.drop(columns=["Selling_Price"])
+    y_train = train["Selling_Price"]
+
+    x_test = test.drop(columns=["Selling_Price"])
+    y_test = test["Selling_Price"]
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
     #
     # Variables categóricas y numéricas
     #
+<<<<<<< HEAD
     cat_cols = x_train.select_dtypes(include=["object"]).columns.tolist()
     num_cols = x_train.select_dtypes(exclude=["object"]).columns.tolist()
 
     print("Columnas categóricas:", cat_cols)
     print("Columnas numéricas:", num_cols)
+=======
+    cat_cols = x_train.select_dtypes(
+        include=["object"]
+    ).columns.tolist()
+
+    num_cols = x_train.select_dtypes(
+        exclude=["object"]
+    ).columns.tolist()
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
     #
     # Preprocesador
     #
     preprocessor = ColumnTransformer(
         transformers=[
+<<<<<<< HEAD
             ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols),
             ("num", MinMaxScaler(), num_cols),
+=======
+            (
+                "cat",
+                OneHotEncoder(handle_unknown="ignore"),
+                cat_cols,
+            ),
+            (
+                "num",
+                MinMaxScaler(),
+                num_cols,
+            ),
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
         ]
     )
 
@@ -154,21 +213,41 @@ def pregunta_01():
     pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
+<<<<<<< HEAD
             ("selectkbest", SelectKBest(score_func=f_regression)),
             ("regressor", LinearRegression()),
+=======
+            (
+                "selectkbest",
+                SelectKBest(score_func=f_regression),
+            ),
+            (
+                "regressor",
+                LinearRegression(),
+            ),
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
         ]
     )
 
     #
+<<<<<<< HEAD
     # Optimización
     #
     param_grid = {"selectkbest__k": list(range(1, 12))}
+=======
+    # Búsqueda de hiperparámetros
+    #
+    param_grid = {
+        "selectkbest__k": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    }
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
     model = GridSearchCV(
         estimator=pipeline,
         param_grid=param_grid,
         cv=10,
         scoring="neg_mean_absolute_error",
+<<<<<<< HEAD
         n_jobs=1,
     )
 
@@ -191,11 +270,29 @@ def pregunta_01():
     except Exception as e:
         print(f"❌ Error guardando el modelo: {e}")
         raise
+=======
+        n_jobs=-1,
+    )
+
+    model.fit(x_train, y_train)
+
+    #
+    # Guardar modelo
+    #
+    with gzip.open(
+        "files/models/model.pkl.gz",
+        "wb",
+    ) as file:
+        pickle.dump(model, file)
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
 
     #
     # Predicciones
     #
+<<<<<<< HEAD
     print("Haciendo predicciones...")
+=======
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e
     y_train_pred = model.predict(x_train)
     y_test_pred = model.predict(x_test)
 
@@ -222,6 +319,7 @@ def pregunta_01():
     #
     # Guardar métricas
     #
+<<<<<<< HEAD
     metrics_path = os.path.join(output_dir, "metrics.json")
     print(f"Guardando métricas en: {metrics_path}")
     
@@ -260,3 +358,15 @@ def pregunta_01():
 if __name__ == "__main__":
     pregunta_01()
 
+=======
+    with open(
+        "files/output/metrics.json",
+        "w",
+    ) as file:
+        for metric in metrics:
+            file.write(json.dumps(metric) + "\n")
+
+   if __name__ == "__main__":
+    pregunta_01()
+       
+>>>>>>> 7857489fca3b3b23fe306ffe82b4b8a5dbdeec3e

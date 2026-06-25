@@ -218,3 +218,7 @@ def pregunta_01():
     ) as file:
         for metric in metrics:
             file.write(json.dumps(metric) + "\n")
+
+   if __name__ == "__main__":
+    pregunta_01()
+       

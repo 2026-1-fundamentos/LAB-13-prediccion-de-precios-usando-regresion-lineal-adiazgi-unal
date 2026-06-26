@@ -126,13 +126,13 @@ def pregunta_01():
         ]
     )
 
-    param_grid = {"selectkbest__k": list(range(1, 13))}
+    param_grid = {"selectkbest__k": list(range(1, 13)) + ["all"]}
 
     model = GridSearchCV(
         estimator=pipeline,
         param_grid=param_grid,
         cv=10,
-        scoring="neg_mean_absolute_error",
+        scoring="neg_mean_squared_error",
         n_jobs=1,
     )
 
